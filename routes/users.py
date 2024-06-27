@@ -1,39 +1,51 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from beanie import PydanticObjectId
+from fastapi.security import OAuth2PasswordRequestForm
+from auth.jwt_handler import create_access_token
+from auth.hash_password import HashPassword
+from database.connections import Database
 
-from models.users import User, UserSignIn
+from models.users import User, TokenResponse
 
 user_route = APIRouter(
     tags=["User"]
 )
-
-users = {}
+user_database = Database(User)
+hash_password = HashPassword()
 
 
 @user_route.post("/signup")
-async def sign_new_user(data: User) -> dict:
-    if data.email in users:
+async def sign_new_user(user: User) -> dict:
+    user_exist = await User.find_one(User.email == user.email)
+    if user_exist:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with supplied username exists."
         )
-    users[data.email] = data
+    hashed_password = hash_password.create_hash(user.password)
+    user.password = hashed_password
+    await user_database.save(user)
     return {
         "message": "User was successfully registered!"
     }
 
 
-@user_route.post("/signin")
-async def sign_user_in(user: UserSignIn) -> dict:
-    if user.email not in users:
+@user_route.post("/signin", response_model=TokenResponse)
+async def sign_user_in(user: OAuth2PasswordRequestForm = Depends()) -> dict:
+    user_exit = await User.find_one(User.email == user.username)
+    if not user_exit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User doesn't exists!"
+            detail="User with this email doesn't exists!"
         )
-    if users[user.email].password != user.password:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Wrong credentiel passed"
-        )
-    return {
-        "message": "User signed successfully!"
-    }
+
+    if hash_password.verify_hash(user.password, user_exit.password):
+        access_token = create_access_token(user_exit.email)
+        return {
+            "access_token": access_token,
+            "token_type": "Bearer"
+        }
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid details passed"
+    )
