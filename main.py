@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from routes.events import event_router
+from routes.products import product_router
 from routes.users import user_route
 from database.connections import Settings
 import uvicorn
@@ -11,9 +12,10 @@ origins = ["*"]
 
 settings = Settings()
 
-app = FastAPI()
+app = FastAPI(title='Event Api')
 app.include_router(user_route, prefix='/users')
 app.include_router(event_router, prefix='/events')
+app.include_router(product_router, prefix="/products")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
 @app.on_event("startup")
 async def init_db():
     await settings.initialize_database()

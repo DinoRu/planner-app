@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 from models.events import Event
+from models.products import Product
 from models.users import User
 
 
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL is not set in the environment variables.")
         client = AsyncIOMotorClient(self.DATABASE_URL)
         await init_beanie(database=client.get_default_database(),
-                          document_models=[Event, User])
+                          document_models=[Event, User, Product])
 
     class Config:
         env_file = ".env"

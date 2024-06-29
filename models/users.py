@@ -14,7 +14,7 @@ class User(Document):
         collection = "users"
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "exemple": {
                 "email": "fastapi@packt.com",
                 "password": "Strong!!!!",
@@ -28,7 +28,7 @@ class UserSignIn(BaseModel):
     password: str
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "exemple": {
                 "email": "fastapi@packt.com",
                 "password": "Strong!!!!",
